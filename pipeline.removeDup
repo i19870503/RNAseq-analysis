@@ -1,0 +1,68 @@
+############pipeline.removeDup##################
+#输入参数：org, 比如hg19
+#结果文件：newVersionGene.combined.gtf: lncRNA基因文件
+#结果文件：${org}.tcons.nc.cnci:非编码的cnci值
+#结果文件：${org}.tcons.coding.cnci:编码的cnci值
+  
+org=$1;
+#分离coding，和noncoding
+awk '$4~/NR/{print  $0;}' ${org}.refseq.bed > ${org}.refseq.nr.bed
+awk '$4~/NM/{print  $0;}' ${org}.refseq.bed > ${org}.refseq.nm.bed
+  
+  
+perl /leofs/noncode/NONCODEv4/cmds/dup.pl ${org}.refseq.nm.bed  3 > ${org}.refseq.nm.bed.withDup
+bedToGtf.sh ${org}.refseq.nm.bed.withDup > ${org}.refseq.nm.gtf
+perl /leofs/noncode/NONCODEv4/cmds/dup.pl ${org}.refseq.nr.bed  3 > ${org}.refseq.nr.bed.withDup
+bedToGtf.sh ${org}.refseq.nr.bed.withDup > ${org}.refseq.nr.gtf
+  
+#分离ENSEMBL中的coding，此处codnig为有对应蛋白产物的转录本
+awk -F "," '$3{print $2;}' ensemblProtein > enst.coding
+awk -F "," '{print $2;}' ensemblProtein > enst.all
+sub.pl enst.coding enst.all > enst.nc
+  
+perl /leofs/noncode/NONCODEv4/cmds/leftJoin.pl enst.nc 1 ${org}.ensembl.bed 4 | cut -f 2,3,4,5,6,7,8,9,10,11,12,13  | awk '$1' > ${org}.ensembl.nc.bed
+perl /leofs/noncode/NONCODEv4/cmds/leftJoin.pl enst.coding 1 ${org}.ensembl.bed 4 | cut -f 2,3,4,5,6,7,8,9,10,11,12,13| awk '$1' > ${org}.ensembl.coding.bed
+  
+perl /leofs/noncode/NONCODEv4/cmds/dup.pl ${org}.ensembl.coding.bed  3 > ${org}.ensembl.coding.bed.withDup
+bedToGtf.sh ${org}.ensembl.coding.bed.withDup > ${org}.ensembl.coding.gtf
+perl /leofs/noncode/NONCODEv4/cmds/dup.pl ${org}.ensembl.nc.bed  3 > ${org}.ensembl.nc.bed.withDup
+bedToGtf.sh ${org}.ensembl.nc.bed.withDup > ${org}.ensembl.nc.gtf
+  
+bedToGtf.sh v3.fa.blat.bed > v3.gtf
+#合并v3, refseq, ensembl
+  
+cuffcompare -r v3.gtf -o mydata -C ${org}.refseq.nr.gtf ${org}.ensembl.nc.gtf v3.gtf
+  
+cuffcompare -r ${org}.ensembl.coding.gtf -o mydataVsEnsCoding mydata.combined.gtf -C
+awk '$4 == "="{print $5;}' mydataVsEnsCoding.tracking | perl -ne '$_ =~ /q1:.*?\|(.*?)\|/; print $1."\n";' > tcons.maybeCoding.ensembl
+cuffcompare -r ${org}.refseq.nm.gtf -o mydataVsRefCoding mydata.combined.gtf -C
+awk '$4 == "="{print $5;}' mydataVsRefCoding.tracking | perl -ne '$_ =~ /q1:.*?\|(.*?)\|/; print $1."\n";' > tcons.maybeCoding.refSeq
+cat tcons.maybeCoding.ensembl tcons.maybeCoding.refSeq | sort | uniq > tcons.maybeCoding
+perl /leofs/noncode/NONCODEv4/cmds/gtfSub.pl tcons.maybeCoding mydata.combined.gtf > newVersion_rmCoding.gtf
+  
+gtf2Bed.pl newVersion_rmCoding.gtf > newVersion_rmCoding.bed
+#Get the sequence
+twoBitToFa -bed=newVersion_rmCoding.bed ${org}.2bit newVersion_rmCoding.fa
+  
+perl -ne 'chomp $_; if(/>/){ if($. > 1){ print "\n"; } print $_."\n";}else{ print $_;}' newVersion_rmCoding.fa > newVersion_rmCoding_seqIn1line.fa
+  
+#Enter CNCI dir
+base=`pwd`
+  
+cd cnci
+ln -s $base/newVersion_rmCoding_seqIn1line.fa ${org}.fa
+perl CNCI.pl -f ${org}.fa -p 20 -l libsvm-3.0 -o ${org} -b
+  
+  
+grep noncoding  ${org}/cnci.result.file | cut -f 1,3 | sed -e 's/>//' | sed -e 's/score: //' > ../${org}.tcons.nc.cnci
+grep coding  ${org}/cnci.result.file | cut -f 1,3 | sed -e 's/>//' | sed -e 's/score: //' > ../${org}.tcons.coding.cnci
+cd ..
+# Leave out of cnci dir
+  
+perl $CMD/leftJoin.pl ${org}.tcons.nc.cnci 1 newVersion_rmCoding.bed 4 | cut -f 3,4,5,6,7,8,9,10,11,12,13,14 > newVersion_rmCoding_cnci.bed
+  
+getBedSeqLength.sh newVersion_rmCoding_cnci.bed | awk '$2>200' | perl $CMD/leftJoin.pl - 1 newVersion_rmCoding_cnci.bed 4 | cut -f 3,4,5,6,7,8,9,10,11,12,13,14 > newVersion_rmCoding_cnci_lnc.bed
+  
+bedToGtf.sh newVersion_rmCoding_cnci_lnc.bed > newVersion_lnc.gtf
+  
+cuffcompare -C -o newVersionGene newVersion_lnc.gtf
