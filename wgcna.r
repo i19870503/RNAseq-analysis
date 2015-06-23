@@ -1,7 +1,12 @@
 library("WGCNA", lib.loc="/home/zluna/R/x86_64-pc-linux-gnu-library/3.1")
+# 预设置
+options(stringsAsFactors=FALSE)  
+allowWGCNAThreads()
+
+
 ### 模拟数据
 
-options(stringsAsFactors=FALSE)  # 预设置
+
 no.obs=30 # 设置样本个数
 ESturquoise<-0; ESbrown<-.6; ESgreen<-.6; ESyellow=0 # 设置基因模块的显著性水平
 ESvector<-c (ESturquoise, ESbrown, ESgreen,ESyellow)
