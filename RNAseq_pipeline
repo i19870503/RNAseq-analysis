@@ -1,0 +1,43 @@
+#!/bin/bash
+#declearation of PATH environment
+source /home/zhongl/.bashrc   
+echo "######################################"
+#date
+workdir = $1
+species = $2
+echo "Working DIR is:" $workdir
+echo "Species:" $species
+echo "Fastq file count is:" `ls $workdir |wc -l`
+#echo "Starting QC for fastq files:"
+#mkdir -p $workdir/fastqc_report
+#fastqc $workdir/*.fq.gz  -q -t 10 -o $workdir/fastqc_report
+date
+echo "Trimming Fastq files"
+find  $workdir -maxdepth 1 -type f -exec /home/zhongl/software/bin/trim_galore {} --length 100 -q 20 -o $workdir/trimed/ \;
+mkdir -p $workdir/trimed/fastqc_report
+fastqc $workdir/trimed/*.fq.gz  -q -t 10 -o $workdir/trimed/fastqc_report
+echo "######################################"
+echo `date` "QC and trim is over!" 
+echo "######################################"
+echo "Starting align to reference genome:"
+for i in $(ls *2.f*.gz)
+do
+    sample=$(echo "$i" | rev | cut -c 9- | rev) 
+    echo "Start Mapping "${sample}    
+    ~/software/hisat2-2.1.0/hisat2  -1 ${sample}.1.fq  -2 ${sample}.2.fq -p 20 -x ~/RNAseq/hisat_idx/Homo_sapiens.GRCh38 --dta-cufflinks -S ${sample}.sam > ${sample}.mapping.output
+    echo "Start sam2bam " ${sample}
+    #samtools view -@ 20 -Sb  ${sample}.sam -o ${sample}.bam
+    echo "Start sort bam file " ${sample}      
+    #samtools sort -@ 20  ${sample}.bam  ${sample}.sorted
+    echo "Output flagstats " ${sample} 
+    #samtools flagstat ${sample}.sorted.bam > ${sample}.stats
+    #echo "SNP calling " ${sample}
+    #samtools mpileup -q 25 -C 50 -uf ../hisat_idx/Homo_sapiens.GRCh38.dna_sm.toplevel.fa ${sample}.sorted.bam |bcftools view -bvcg - > ${sample}.raw.bcf &     
+     
+    #export PATH=$PATH:/home/zhongl/.local/bin
+    #read_distribution.py -i ${sample}.sorted.bam -r ../hisat_idx/Homo_sapiens.GRCh38.89.bed >${sample}.read_distribution &
+    #junction_annotation.py -i ${sample}.sorted.bam  -o ${sample}_output -r /home/zhongl/RNAseq/hisat_idx/Homo_sapiens.GRCh38.89.bed &
+    #geneBody_coverage.py -r /home/zhongl/RNAseq/hiisat_idx/Homo_sapiens.GRCh38.89.bed -i ${sample}.bam  -o ${sample}_output &
+
+
+
