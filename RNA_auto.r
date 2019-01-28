@@ -14,6 +14,7 @@ library(rgl)
 library(vegan)
 
 library(org.Mm.eg.db)
+library(org.Hs.eg.db)
 library(GSEABase)
 library(GOstats)
 library(Category)
@@ -72,13 +73,19 @@ for( i in 1:length(contr)){
   
   ### Output the heatmap of DEG between comparable group, if the count od deg over 100 the heatmap will not print the gene
   pdf(paste('deg_heatmap.',contr[i],'.pdf',sep = ''), onefile=FALSE)
+  deg_cmp_column = c(grep(strsplit(contr, "_vs_")[[i]][1], sampleTable[,3]), grep(strsplit(contr, "_vs_")[[i]][2], sampleTable[,3]))
   if(length(deg_q) >= 100){
-    pheatmap(rpkm[deg_q,],show_rownames = 0,scale = 'row', col = bluered(55))
+    pheatmap(rpkm[deg_q, deg_cmp_column],show_rownames = 0,scale = 'row', col = bluered(55), border_color = 0, cellwidth = 40, cluster_cols = 0)
     dev.off()
   }
   else{
-    pheatmap(rpkm[deg_q,],show_rownames = 1,scale = 'row', col = bluered(55),border_color = 0)
+    pheatmap(rpkm[deg_q,deg_cmp_column],show_rownames = 1,scale = 'row', col = bluered(55),border_color = 0)
     dev.off()
   }
+  
+  ### GO and KEGG
+  #GOenrich_Hs(deg = rownames(resSig1_up), outfile = paste(contr[i],"up_regulated",sep = '-'))
+  #GOenrich_Hs(deg = rownames(resSig1_down), outfile = paste(contr[i],"down_regulated",sep = '-'))
+  GOenrich_Hs(deg = rownames(resSig1), outfile = contr[i])
 }
 write.table(deg_num, file = "deg_num.xls", col.names = NA, sep ='\t')
