@@ -72,8 +72,8 @@ for( i in 1:length(contr)){
   
   ### Output GO KEGG enrichment result
   Mmu_gokegg(genes = rownames(resSig1), output = contr[i])
-  Mmu_gokegg(genes = rownames(resSig1_up), output = paste(contr[i]), 'up-regulated_genes', sep = '-'))
-  Mmu_gokegg(genes = rownames(resSig1_down), output = paste(contr[i]), 'down-regulated_genes', sep = '-'))
+  Mmu_gokegg(genes = rownames(resSig1_up), output = paste(contr[i], 'up-regulated_genes', sep = '-'))
+  Mmu_gokegg(genes = rownames(resSig1_down), output = paste(contr[i], 'down-regulated_genes', sep = '-'))
   
   
   
