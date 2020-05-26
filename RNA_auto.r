@@ -70,6 +70,13 @@ for( i in 1:length(contr)){
   abline(v = -1,lty =2)
   dev.off()
   
+  ### Output GO KEGG enrichment result
+  Mmu_gokegg(genes = rownames(resSig1), output = contr[i])
+  Mmu_gokegg(genes = rownames(resSig1_up), output = paste(contr[i]), 'up-regulated_genes', sep = '-'))
+  Mmu_gokegg(genes = rownames(resSig1_down), output = paste(contr[i]), 'down-regulated_genes', sep = '-'))
+  
+  
+  
   ### Output the heatmap of DEG between comparable group, if the count od deg over 100 the heatmap will not print the gene
   pdf(paste('deg_heatmap.',contr[i],'.pdf',sep = ''), onefile=FALSE)
   if(length(deg_q) >= 100){
