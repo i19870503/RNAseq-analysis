@@ -79,12 +79,12 @@ for( i in 1:length(contr)){
   
   ### Output the heatmap of DEG between comparable group, if the count od deg over 100 the heatmap will not print the gene
   pdf(paste('deg_heatmap.',contr[i],'.pdf',sep = ''), onefile=FALSE)
-  if(length(deg_q) >= 100){
-    pheatmap(rpkm[deg_q,],show_rownames = 0,scale = 'row', col = bluered(55))
+  if(length(deg_q) >= 50){
+    pheatmap(all_rpkm[deg_q,],show_rownames = 0,scale = 'row', col = bluered(55))
     dev.off()
   }
   else{
-    pheatmap(rpkm[deg_q,],show_rownames = 1,scale = 'row', col = bluered(55),border_color = 0)
+    pheatmap(all_rpkm[deg_q,],show_rownames = 1,scale = 'row', col = bluered(55),border_color = 0)
     dev.off()
   }
 }
